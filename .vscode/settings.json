@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "detonary words",
+            "database": "${workspaceFolder:detonary}/words_alpha.sqlite",
+            "group": "detonary"
+        }
+    ]
+}
