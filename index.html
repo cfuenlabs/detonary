@@ -1,160 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/x-icon" href="./detonary_favicon.ico">
+		<title>Document</title>
+	</head>
+	<style>
+		@font-face {
+			font-family: "Rob";
+			src: url("./Rob.woff2") format("woff2"), url("./Rob.woff") format("woff");
+			font-weight: 900;
+			font-style: normal;
+			font-display: swap;
+		}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
+		@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
 
-<style>
-    @font-face {
-        font-family: 'Betm';
-        src: url('Betm-Black.woff2') format('woff2'),
-            url('Betm-Black.woff') format('woff');
-        font-weight: 900;
-        font-style: normal;
-        font-display: swap;
-    }
+		body {
+			font-family: "Rob";
+			background-color: rgb(34, 42, 113);
+			color: white;
+		}
 
+		.Word {
+			display: flex;
+			flex-direction: row;
+			gap: 2px;
+		}
 
-    body {
-        font-family: 'Betm';
-        background-color: rgb(34, 42, 113);
-        color: white
-    }
+		.Letter {
+			border-radius: 3px;
+			width: 9.375px;
+			text-align: center;
+			justify-content: center;
+			align-items: center;
+			height: fit-content;
+		}
 
-    .Word {
-        display: flex;
-        flex-direction: row;
-        gap: 2px;
-    }
+		.Letter.Typed {
+			padding: 2px 3px;
+			background-color: white;
+			color: rgb(34, 42, 113);
+		}
 
-    .Letter {
-        border-radius: 3px;
-        width: 9.375px;
-        text-align: center;
-        justify-content: center;
-        align-items: center;
-        height: fit-content;
-    }
+		@keyframes letter-in {
+			0% {
+				transform: translateY(0px);
+			}
 
-    .Letter.Typed {
-        padding: 2px 3px;
-        background-color: white;
-        color: rgb(34, 42, 113);
-    }
+			50% {
+				transform: translateY(-15px);
+			}
 
-    @keyframes letter-in {
-        0% {
-            transform: translateY(0px);
-        }
+			100% {
+				transform: translateY(0px);
+			}
+		}
 
-        50% {
-            transform: translateY(-15px);
-        }
+		.Letter.Prompt {
+			padding: 3px 5px;
+			background-color: rgb(175, 187, 210);
+			color: rgb(0, 0, 53);
+			margin-right: 2px;
+			animation: letter-in 100ms ease-out;
+		}
 
-        100% {
-            transform: translateY(0px);
-        }
-    }
+		#Hero {
+			display: flex;
+			align-items: center;
+		}
+	</style>
 
-    .Letter.Prompt {
-        padding: 3px 5px;
-        background-color: rgb(175, 187, 210);
-        color: rgb(0, 0, 53);
-        margin-right: 2px;
-        animation: letter-in 100ms ease-out;
-    }
+	<body>
+		<div id="Hero">
+			<h1>CFuen Labs Detonary!</h1>
+		</div>
+		<input type="text" style="margin-bottom: 5px" />
+		<div
+			id="WordList"
+			style="display: flex; flex-direction: column; gap: 5px"
+		></div>
+		<div
+			id="LoadingModal"
+			style="
+				top: 0;
+				left: 0;
+				position: fixed;
+				width: 100vw;
+				height: 100vh;
+				background-color: rgb(0 0 0 / 0.5);
+				font-size: 30px;
+				display: none;
+				justify-content: center;
+				align-items: center;
+			"
+		>
+			Loading...
+		</div>
+		<div
+			id="Pagination"
+			style="display: flex; flex-direction: row; gap: 5px"
+		></div>
+	</body>
 
-    #Hero {
-        display: flex;
-        align-items: center;
-    }
-</style>
+	<script>
+		let getProgress;
+		let typedLength = 0;
+		let typedWord = "";
+		let lastTypedLetterElm;
+		window.wordsPlusHTML = [];
 
-<body>
-    <div id="Hero">
-        <h1>CFuen Labs Detonary!</h1>
-    </div>
-    <input type="text" style="margin-bottom: 5px;">
-    <div id="WordList" style="display: flex; flex-direction: column; gap: 5px;">
-        <span id="LoadingMessage">
-            Word List Loading...
-        </span>
-    </div>
-</body>
+		const cacheQuery = (letter) => {
+			console.log(
+				`cacheQuery for ${letter}: ${
+					window.wordsPlusHTML.find((wph) => wph[0] === letter)[1].length
+				} chars`
+			);
+			return window.wordsPlusHTML.find((wph) => wph[0] === letter)[1];
+		};
 
-<script>
-    let getProgress;
-    let typedLength = 0;
-    let lastTypedLetterElm;
-    window.wordList = []
+		const renderByLetter = (letter) => {
+			const wordListDiv = document.querySelector("#WordList");
+			const paginationDiv = document.querySelector("#Pagination");
 
-    addEventListener('pywebviewready', () => {
-        const py = pywebview.api
-        py.log('PyWebview API loaded in JS.')
+			wordListDiv.innerHTML = "";
+			wordListDiv.innerHTML =
+				cacheQuery(letter) +
+				"<span>End of the list... But there's more letters</span>";
 
-        py.log('DOM loaded.')
+			paginationDiv.innerHTML = "";
+			window.wordsPlusHTML.forEach((l) => {
+				paginationDiv.innerHTML +=
+					`<span onclick="renderByLetter('${l[0]}')" class="Letter Typed"${
+						l[0] === letter
+							? 'style="opacity:50%; pointer-events: none;"'
+							: 'style="cursor: pointer;"'
+					}>` +
+					l[0] +
+					"</span>";
+			});
+			document.querySelector("#LoadingModal").style.display = "none";
+		};
 
-        py.set_interval(1000, `
-        const py = pywebview.api;
-        py.log('Interval...')
-        py.get_prompt_results().then(results => {
-            py.log('Prompt results length is '+results.length)
-            py.log('window.wordList length is '+window.wordList.length)
-            if (JSON.stringify(results) !== JSON.stringify(window.wordList)) {
-                window.wordList = results
+		addEventListener("pywebviewready", () => {
+			const py = pywebview.api;
+			py.log("PyWebview API loaded in JS.");
 
-                const wordListDiv = document.querySelector('#WordList');
-                wordListDiv.innerHTML = ''
-                py.log('Mutating DOM...')
-                console.log('mutating dom...')
-                results.forEach((word) => {
-                    const wordElm = document.createElement('div');
-                    console.log(typeof word[0])
-                    word = word[0].toUpperCase().split('')
-                    wordElm.classList = ['Word']
-                    wordElm.innerHTML = '<span class="Letter Typed">' + word.join('</span><span class="Letter Typed">') + '</span>';
-                    wordListDiv.appendChild(wordElm);
-                    console.log('child aborted! <3')
-                })
-                document.querySelector('#LoadingMessage').style.display = 'none'
-                py.log('DOM mutated...')
-            } else {
-                py.log('Won\\'t mutate DOM.')
-            }
-        })
-        `)
+			py.log("DOM loaded.");
 
-        const wordListDiv = document.querySelector('#WordList');
-        const loadingMessageElm = document.querySelector('#LoadingMessage')
-        document.querySelector('input').addEventListener('input', (e) => {
-            document.querySelector('#Hero').querySelector('h1').textContent = `English words containing: `
+			// py.load_font_shitty('./Rob.woff2')
 
-            // if typed
-            if (e.target.value.length > typedLength) {
-                const newPromptLetter = document.createElement('div')
-                newPromptLetter.textContent = e.target.value.toUpperCase().split('')[e.target.value.length - 1]
-                lastTypedLetterElm = newPromptLetter;
-                newPromptLetter.classList = ['Letter Prompt']
-                document.querySelector('#Hero').appendChild(newPromptLetter)
-                // if backspace
-            } else {
-                document.querySelector('#Hero').removeChild(lastTypedLetterElm)
-                lastTypedLetterElm = document.querySelector('#Hero').childNodes[document.querySelector('#Hero').childNodes.length - 1]
-            }
+			py.set_interval(
+				1000,
+				`
+					const py = pywebview.api;
+					py.log('Interval...')
+					py.get_prompt_results().then(results => {
+						console.log('done')
+						console.log(results)
+						if (results !== null) {
+							window.wordsPlusHTML = results;
 
-            typedLength = e.target.value.length
-            wordListDiv.innerHTML = ''
-            wordListDiv.appendChild(loadingMessageElm)
-            loadingMessageElm.style.display = 'flex'
-            py.log(`Awaiting words for prompt \'${e.target.value}\' from backend`)
-            if (e.target.value.length > 1) {
-                py.threaded_prompt_search(e.target.value)
-            }
-        })
-    })
-</script>
+							renderByLetter('a')
+							py.log('DOM mutated...')
+						} else {
+							py.log('Won\\'t mutate DOM.')
+						}
+					})
+				`
+			);
 
+			// typing stuff
+			const wordListDiv = document.querySelector("#WordList");
+			document.querySelector("input").addEventListener("input", (e) => {
+				document.querySelector("#LoadingModal").style.display = "flex";
+				document
+					.querySelectorAll("#Hero .Letter.Prompt")
+					.forEach((hlp) => hlp.remove());
+				document.querySelector(
+					"#Hero h1"
+				).innerHTML = `English words containing: `;
+				e.target.value
+					.toUpperCase()
+					.split("")
+					.forEach((l) => {
+						const newPromptLetter = document.createElement("div");
+						newPromptLetter.classList = ["Letter Prompt"];
+						newPromptLetter.textContent = l;
+						document.querySelector("#Hero").appendChild(newPromptLetter);
+					});
+
+				typedLength = e.target.value.length;
+				wordListDiv.innerHTML = "";
+				py.log(`Awaiting words for prompt \'${e.target.value}\' from backend`);
+				if (e.target.value.length > 1) {
+					py.threaded_prompt_search(e.target.value);
+				}
+			});
+		});
+	</script>
 </html>
